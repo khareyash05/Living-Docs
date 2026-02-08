@@ -1,4 +1,4 @@
-module github.com/yashkhare/living-docs
+module github.com/khareyash05/living-docs
 
 go 1.24.5
 

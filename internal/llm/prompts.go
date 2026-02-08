@@ -38,21 +38,29 @@ Rules:
 
 // UpdaterUserPrompt builds the user prompt for the documentation updater.
 func UpdaterUserPrompt(codeContent, docContent string) string {
+	var docSection, instruction1 string
+	if docContent == "" {
+		docSection = "There is no existing documentation for this code. Create comprehensive documentation from scratch."
+		instruction1 = "Analyze the code and create comprehensive documentation."
+	} else {
+		docSection = fmt.Sprintf("Here is the current documentation:\n\n%s", "```\n"+docContent+"\n```")
+		instruction1 = "Compare the code with the documentation."
+	}
+
 	return fmt.Sprintf(`Here is the current code:
 
 %s
 
-Here is the current documentation:
-
 %s
 
 Instructions:
-1. Compare the code with the documentation.
+1. %s
 2. Identify any discrepancies (missing parameters, outdated function signatures, removed features, etc.).
 3. Explain what needs to change and why.
 4. Output the fully updated documentation wrapped in <updated_doc> and </updated_doc> tags.
 
 If the documentation is already accurate, return it unchanged within the tags.`,
 		"```\n"+codeContent+"\n```",
-		"```\n"+docContent+"\n```")
+		docSection,
+		instruction1)
 }

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/yashkhare/living-docs/internal/analyzer"
-	"github.com/yashkhare/living-docs/internal/llm"
+	"github.com/khareyash05/living-docs/internal/analyzer"
+	"github.com/khareyash05/living-docs/internal/llm"
 )
 
 // WebhookHandler processes GitHub webhook events for documentation updates.

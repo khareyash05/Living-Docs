@@ -9,9 +9,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	ghWebhooks "github.com/go-playground/webhooks/v6/github"
-	"github.com/yashkhare/living-docs/internal/config"
-	ghClient "github.com/yashkhare/living-docs/internal/github"
-	"github.com/yashkhare/living-docs/internal/llm"
+	"github.com/khareyash05/living-docs/internal/config"
+	ghClient "github.com/khareyash05/living-docs/internal/github"
+	"github.com/khareyash05/living-docs/internal/llm"
 )
 
 func main() {
