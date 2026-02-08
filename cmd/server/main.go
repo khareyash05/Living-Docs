@@ -15,12 +15,17 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
+
 	cfg, err := config.MustLoadForServer()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	llmClient := llm.NewClient(cfg.OpenAIAPIKey, cfg.LLMModel)
+	llmClient, err := llm.NewClient(ctx, cfg.AnthropicAPIKey, cfg.LLMModel)
+	if err != nil {
+		log.Fatalf("Failed to create LLM client: %v", err)
+	}
 	handler := ghClient.NewWebhookHandler(llmClient)
 
 	hook, err := ghWebhooks.New(ghWebhooks.Options.Secret(cfg.GitHubWebhookSecret))

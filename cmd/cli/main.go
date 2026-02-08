@@ -102,7 +102,10 @@ func runFix(cmd *cobra.Command, args []string) error {
 	}
 
 	// Initialize LLM client
-	llmClient := llm.NewClient(cfg.OpenAIAPIKey, cfg.LLMModel)
+	llmClient, err := llm.NewClient(ctx, cfg.AnthropicAPIKey, cfg.LLMModel)
+	if err != nil {
+		return fmt.Errorf("failed to create LLM client: %w", err)
+	}
 
 	// Step 1: Classify whether docs need updating (unless skipped)
 	if !skipCheck {

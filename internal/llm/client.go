@@ -5,44 +5,64 @@ import (
 	"fmt"
 	"strings"
 
-	openai "github.com/sashabaranov/go-openai"
+	"github.com/anthropics/anthropic-sdk-go"
+	"github.com/anthropics/anthropic-sdk-go/option"
+	"github.com/anthropics/anthropic-sdk-go/packages/param"
 )
 
-// Client wraps the OpenAI API for documentation operations.
+// Client wraps the Anthropic Claude API for documentation operations.
 type Client struct {
-	api   *openai.Client
-	model string
+	api   anthropic.Client
+	model anthropic.Model
 }
 
 // NewClient creates a new LLM client with the given API key and model.
-func NewClient(apiKey, model string) *Client {
+func NewClient(ctx context.Context, apiKey, model string) (*Client, error) {
+	client := anthropic.NewClient(option.WithAPIKey(apiKey))
+
 	return &Client{
-		api:   openai.NewClient(apiKey),
-		model: model,
-	}
+		api:   client,
+		model: anthropic.Model(model),
+	}, nil
 }
 
 // ClassifyChange asks the LLM whether the given code warrants a documentation update.
 // Returns true if the docs should be updated, along with the reasoning.
 func (c *Client) ClassifyChange(ctx context.Context, codeContent string) (bool, string, error) {
-	resp, err := c.api.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
-		Model: c.model,
-		Messages: []openai.ChatCompletionMessage{
-			{Role: openai.ChatMessageRoleSystem, Content: ClassifierSystemPrompt},
-			{Role: openai.ChatMessageRoleUser, Content: ClassifierUserPrompt(codeContent)},
+	params := anthropic.MessageNewParams{
+		Model:     c.model,
+		MaxTokens: 256,
+		System: []anthropic.TextBlockParam{
+			{Text: ClassifierSystemPrompt},
 		},
-		Temperature: 0.1,
-		MaxTokens:   256,
-	})
+		Messages: []anthropic.MessageParam{
+			anthropic.NewUserMessage(anthropic.NewTextBlock(ClassifierUserPrompt(codeContent))),
+		},
+		Temperature: param.Opt[float64]{Value: 0.1},
+	}
+
+	resp, err := c.api.Messages.New(ctx, params)
 	if err != nil {
 		return false, "", fmt.Errorf("LLM classification request failed: %w", err)
 	}
 
-	if len(resp.Choices) == 0 {
-		return false, "", fmt.Errorf("LLM returned no choices")
+	if len(resp.Content) == 0 {
+		return false, "", fmt.Errorf("LLM returned no content")
 	}
 
-	answer := resp.Choices[0].Message.Content
+	// Extract text from the first content block
+	var answer string
+	for _, block := range resp.Content {
+		if block.Type == "text" && block.Text != "" {
+			answer = block.Text
+			break
+		}
+	}
+
+	if answer == "" {
+		return false, "", fmt.Errorf("LLM response did not contain text content")
+	}
+
 	needsUpdate := strings.HasPrefix(strings.TrimSpace(strings.ToUpper(answer)), "YES")
 
 	return needsUpdate, answer, nil
@@ -51,25 +71,36 @@ func (c *Client) ClassifyChange(ctx context.Context, codeContent string) (bool, 
 // UpdateDocumentation asks the LLM to update the documentation based on the code.
 // Returns the updated documentation content.
 func (c *Client) UpdateDocumentation(ctx context.Context, codeContent, docContent string) (string, error) {
-	resp, err := c.api.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
-		Model: c.model,
-		Messages: []openai.ChatCompletionMessage{
-			{Role: openai.ChatMessageRoleSystem, Content: UpdaterSystemPrompt},
-			{Role: openai.ChatMessageRoleUser, Content: UpdaterUserPrompt(codeContent, docContent)},
+	params := anthropic.MessageNewParams{
+		Model:     c.model,
+		MaxTokens: 4096,
+		System: []anthropic.TextBlockParam{
+			{Text: UpdaterSystemPrompt},
 		},
-		Temperature: 0.2,
-		MaxTokens:   4096,
-	})
+		Messages: []anthropic.MessageParam{
+			anthropic.NewUserMessage(anthropic.NewTextBlock(UpdaterUserPrompt(codeContent, docContent))),
+		},
+		Temperature: param.Opt[float64]{Value: 0.2},
+	}
+
+	resp, err := c.api.Messages.New(ctx, params)
 	if err != nil {
 		return "", fmt.Errorf("LLM update request failed: %w", err)
 	}
 
-	if len(resp.Choices) == 0 {
-		return "", fmt.Errorf("LLM returned no choices")
+	if len(resp.Content) == 0 {
+		return "", fmt.Errorf("LLM returned no content")
 	}
 
-	content := resp.Choices[0].Message.Content
-	updated, err := extractUpdatedDoc(content)
+	// Extract text from all content blocks
+	var content strings.Builder
+	for _, block := range resp.Content {
+		if block.Type == "text" && block.Text != "" {
+			content.WriteString(block.Text)
+		}
+	}
+
+	updated, err := extractUpdatedDoc(content.String())
 	if err != nil {
 		return "", err
 	}

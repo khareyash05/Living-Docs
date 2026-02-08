@@ -9,9 +9,9 @@ import (
 
 // Config holds all application configuration.
 type Config struct {
-	// OpenAI settings
-	OpenAIAPIKey string
-	LLMModel     string
+	// Anthropic Claude settings
+	AnthropicAPIKey string
+	LLMModel        string
 
 	// GitHub App settings
 	GitHubAppID          string
@@ -29,8 +29,8 @@ func Load() (*Config, error) {
 	_ = godotenv.Load()
 
 	cfg := &Config{
-		OpenAIAPIKey:         os.Getenv("OPENAI_API_KEY"),
-		LLMModel:             getEnvOrDefault("LLM_MODEL", "gpt-4o"),
+		AnthropicAPIKey:      os.Getenv("ANTHROPIC_API_KEY"),
+		LLMModel:             getEnvOrDefault("LLM_MODEL", "claude-sonnet-4-5"),
 		GitHubAppID:          os.Getenv("GITHUB_APP_ID"),
 		GitHubPrivateKeyPath: os.Getenv("GITHUB_PRIVATE_KEY_PATH"),
 		GitHubWebhookSecret:  os.Getenv("GITHUB_WEBHOOK_SECRET"),
@@ -47,8 +47,8 @@ func MustLoadForCLI() (*Config, error) {
 		return nil, err
 	}
 
-	if cfg.OpenAIAPIKey == "" {
-		return nil, fmt.Errorf("OPENAI_API_KEY is required; set it in your environment or .env file")
+	if cfg.AnthropicAPIKey == "" {
+		return nil, fmt.Errorf("ANTHROPIC_API_KEY is required; set it in your environment or .env file")
 	}
 
 	return cfg, nil
@@ -61,8 +61,8 @@ func MustLoadForServer() (*Config, error) {
 		return nil, err
 	}
 
-	if cfg.OpenAIAPIKey == "" {
-		return nil, fmt.Errorf("OPENAI_API_KEY is required; set it in your environment or .env file")
+	if cfg.AnthropicAPIKey == "" {
+		return nil, fmt.Errorf("ANTHROPIC_API_KEY is required; set it in your environment or .env file")
 	}
 	if cfg.GitHubWebhookSecret == "" {
 		return nil, fmt.Errorf("GITHUB_WEBHOOK_SECRET is required for the webhook server")
